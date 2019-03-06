@@ -5,6 +5,7 @@ import json
 import time
 import random
 import math
+import urllib.parse
 
 
 class MyBot:
@@ -17,17 +18,51 @@ class MyBot:
                 nextStr += " | " + '|'.join(ss[2:])
             return self.answer(nextStr)
         msg = str.strip(msg)
-        splt = msg.split(" ")
+        splt = list(filter(None, msg.split(" ")))
         splt[0] = str.strip(splt[0])
         if len(splt) == 1:
             if splt[0] == 'talk':
                 return self.randWord()
+            if splt[0] == 'random':
+                return str(random.random())
+            if splt[0] == 'welcome':
+                return "欢迎欢迎 热烈欢迎"
+            if splt[0] == 'shutdown':
+                return "你很坏哦"
+            if splt[0] == 'reboot':
+                return "重启中——重启失败——再次重启——重启成功！"
         if len(splt) == 2:
             if splt[0] == 'split':
                 return ' '.join(list(splt[1]))
-        elif len(splt) == 3:
+            if splt[0] == 'sort':
+                return ''.join(sorted(list(splt[1].replace('\n', ''))))
+            if splt[0] == 'list':
+                return '\n'.join(list(splt[1]))
+            if splt[0] == 'concat':
+                return splt[1].replace('\n', '')
+        if len(splt) == 3:
             if splt[0] == 'split':
                 return ' '.join(splt[1].split(splt[2]))
+            if splt[0] == 'append':
+                return splt[2] + splt[1]
+        if splt[0] == 'loop' and len(splt) >= 3:
+            try:
+                loopNum = int(splt[1])
+                if loopNum > 10:
+                    return "循环次数超过10了……我拒绝"
+                result = []
+                for i in range(loopNum):
+                    result.append(self.answer(' '.join(splt[2:])))
+                return '\n'.join(result)
+            except Exception:
+                return "我觉得你这语法有问题哦"
+        if splt[0] == 'each' and len(splt) >= 2:
+            result = []
+            children = splt[-1].split('\n')
+            for i in range(len(children)):
+                splt[-1] = children[i]
+                result.append(self.answer(' '.join(splt[1:])))
+            return '\n'.join(result)
         if (splt[0] == 'translate' or splt[0] == 'trans') and len(splt) > 1:
             return self.translate(' '.join(splt[1:]))
         if (splt[0] == 'echo') and len(splt) > 1:
@@ -38,6 +73,12 @@ class MyBot:
             return self.shuffle(''.join(splt[1:]))
         if (splt[0] == 'calc') and len(splt) > 1:
             return self.calc(''.join(splt[1:]))
+        if splt[0] == 'import':
+            return 'import! import! 天天import!'
+        if splt[0] == 'sudo':
+            return '你没有sudo的权限啦!!!'
+        if splt[0] == 'baidu' and len(splt) > 1:
+            return 'https://www.baidu.com/s?wd=' + urllib.parse.quote('+'.join(splt[1:]))
         return "……"
 
     def shuffle(self, msg):
@@ -59,8 +100,6 @@ class MyBot:
         ostack = []
         ops = ['+', '-', '*', '/']
         sops = ['sin', 'cos', 'sqrt']
-        lastIsDigit = False
-        dotNum = 0
 
         def subCalc(ost, vst):
             op = ost.pop()
@@ -87,11 +126,12 @@ class MyBot:
         def getTokens(expr):
             tks = []
             bop = ['+', '-', '*', '/']
-            ssop = ['sin', 'cos', 'sqrt']
+            ssop = ['sin', 'cos', 'sqrt', 'PI']
             mach = [
                 {
                     's': 1,
                     'c': 2,
+                    'P': 7,
                 },
                 {
                     'i': 4,
@@ -111,6 +151,9 @@ class MyBot:
                 },
                 {
                     't': 'sqrt',
+                },
+                {
+                    'I': 'PI',
                 }
             ]
             lastDigit = False
@@ -162,26 +205,17 @@ class MyBot:
             return "我不会算这个，我只能算点简单的"
         for i in range(len(expr)):
             if expr[i][0].isdigit():
-                if lastIsDigit:
-                    vstack.append(vstack.pop() + expr[i])
-                else:
-                    vstack.append(expr[i])
-                    lastIsDigit = True
+                vstack.append(expr[i])
+            elif expr[i] == 'PI':
+                vstack.append(str(math.pi))
             elif expr[i] == ')':
-                lastIsDigit = False
-                dotNum = 0
                 try:
                     subCalc(ostack, vstack)
                 except ZeroDivisionError:
                     return "我不能算这个！除以0你自己除！"
                 except IndexError:
                     return "我不会了，对不起（卑微）"
-            elif expr[i] == '.' and dotNum == 0:
-                vstack.append(vstack.pop() + expr[i])
-                dotNum = 1
             elif expr[i] in ops or expr[i] in sops:
-                lastIsDigit = False
-                dotNum = 0
                 ostack.append(expr[i])
         while len(ostack) > 0:
             try:
@@ -202,7 +236,6 @@ class MyBot:
             'Internal server eeeeeeerror',
             '岩烧店的烟味弥漫隔壁是国术馆',
             '安静的巷口，单车和人交错经过',
-            '就算全世界与坤坤为敌，我也会站在全世界这边！',
             '还记得昨天，那个夏天，微风吹过的一瞬间',
             '手中握着格桑花呀，美得让我忘了摘下',
             '风吹落最后一片叶，我的心也飘着雪',
@@ -211,6 +244,8 @@ class MyBot:
             '因为我，仍有梦，依然将你放在我心中',
             'PHP是世界上最好的语言',
             'We are the world, we are the children',
+            '我啥也不会说',
+            '听说我这个talk功能就只是随机的',
         ]
         index = random.randint(0, len(words) - 1)
         return words[index]
@@ -259,3 +294,4 @@ class Helper:
 
         response = Helper.do_request(data)
         return json.loads(response.content.decode('utf-8'))["translation"][0]
+
